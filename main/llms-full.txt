@@ -847,7 +847,7 @@ For support tiers, see [Supported platforms](https://docs.atuin.sh/support/index
 atuin hook install claude-code
 ```
 
-This adds hook entries to `~/.claude/settings.json`. Claude Code calls `atuin hook claude-code` on each `Bash` tool use, passing the event as JSON on `stdin`.
+This adds hook entries to `~/.claude/settings.json`. Claude Code calls `atuin hook claude-code` on each Bash tool use matching `^Bash$`, passing the event as JSON on `stdin`.
 
 ### Codex
 
@@ -1174,127 +1174,6 @@ This removes your account and all synchronized history from the server. **Local 
 | Remove duplicates                        | `atuin history dedup --before <date> --dupkeep <n>` |
 | Delete sync account                      | `atuin account delete`                              |
 
-# Syncing dotfiles
-
-While Atuin started as a tool for syncing and searching shell history, we're building tooling for syncing dotfiles across machines, and making them easier to work with.
-
-At the moment, Atuin supports managing and syncing of shell aliases and environment variables - with more coming soon.
-
-Dotfiles syncing is available on zsh, bash, fish, xonsh, and PowerShell. See [Supported platforms](https://docs.atuin.sh/support/index.md) for the full support matrix.
-
-Note: Atuin handles your configuration internally, so once it's installed you no longer need to edit your config files manually.
-
-## Required config
-
-Once Atuin is set up and installed, the following is required in your config file (`~/.config/atuin/config.toml`)
-
-```
-[dotfiles]
-enabled = true
-```
-
-In a later release, this will be enabled by default.
-
-## Usage
-
-### Aliases
-
-After creating or deleting an alias, remember to restart your shell!
-
-#### Creating an alias
-
-```
-atuin dotfiles alias set NAME 'COMMAND'
-```
-
-For example, to alias `k` to be `kubectl`
-
-```
-atuin dotfiles alias set k 'kubectl'
-```
-
-or to alias `ll` to be `ls -lah`
-
-```
-atuin dotfiles alias set ll 'ls -lah'
-```
-
-#### Deleting an alias
-
-Delete an alias with:
-
-```
-atuin dotfiles alias delete NAME
-```
-
-For example, to delete the above alias `k`:
-
-```
-atuin dotfiles alias delete k
-```
-
-#### Listing aliases
-
-You can list all aliases with:
-
-```
-atuin dotfiles alias list
-```
-
-### Env vars
-
-After creating or deleting an env var, remember to restart your shell!
-
-#### Creating a var
-
-```
-atuin dotfiles var set NAME 'value'
-```
-
-For example, to set `FOO` to be `bar`
-
-```
-atuin dotfiles var set FOO 'bar'
-```
-
-Vars are exported by default, but you can create a shell var like so
-
-```
-atuin dotfiles var set -n foo 'bar'
-```
-
-#### Deleting a var
-
-Delete a var with:
-
-```
-atuin dotfiles var delete NAME
-```
-
-For example, to delete the above var `FOO`:
-
-```
-atuin dotfiles var delete FOO
-```
-
-#### Listing vars
-
-You can list all vars with:
-
-```
-atuin dotfiles var list
-```
-
-### Syncing and backing up dotfiles
-
-If you have [set up sync](https://docs.atuin.sh/guide/sync/index.md), then running
-
-```
-atuin sync
-```
-
-will back up your config to the server and sync it across machines.
-
 # Theming
 
 For terminal interface customization, Atuin supports user and built-in color themes.
@@ -1493,9 +1372,9 @@ sync_address = "https://api.atuin.sh"
 
 Default: `5m`
 
-How often to automatically sync with the server. This can be given in a "human-readable" format. For example, `10s`, `20m`, `1h`, etc.
+How often to automatically sync with the server, as a duration like `10s`, `20m`, `1h`, or `1d`.
 
-If set to `0`, Atuin will sync after every command. Some servers may rate limit frequent syncs, but this won't cause any issues.
+A bare number is read as a count of seconds, for backwards compatibility. If set to `0`, Atuin will sync after every command — some servers may rate limit frequent syncs, but this won't cause any issues.
 
 ```
 sync_frequency = "5m"
@@ -1838,22 +1717,26 @@ show_numeric_shortcuts = true
 
 ### `network_timeout`
 
-Default: `30`
+Default: `30s`
 
-The max amount of time (in seconds) to wait for a network request. If any operations with a sync server take longer than this, the code will fail - rather than wait indefinitely.
+The maximum time to wait for a network request, as a duration like `500ms`, `30s`, or `5m`. If any operation with a sync server takes longer than this, it fails rather than waiting indefinitely.
+
+A bare number is read as a count of seconds (`network_timeout = 30`), for backwards compatibility.
 
 ```
-network_timeout = 30
+network_timeout = "30s"
 ```
 
 ### `network_connect_timeout`
 
-Default: `5`
+Default: `5s`
 
-The max time (in seconds) Atuin waits for a connection to become established with a remote sync server. Any longer than this and the request will fail.
+The maximum time Atuin waits for a connection to a remote sync server to be established, as a duration like `500ms`, `5s`, or `1m`. Any longer and the request fails.
+
+A bare number is read as a count of seconds (`network_connect_timeout = 5`), for backwards compatibility.
 
 ```
-network_connect_timeout = 5
+network_connect_timeout = "5s"
 ```
 
 ### `extra_headers`
@@ -1872,12 +1755,14 @@ extra_headers = { "CF-Access-Client-Id" = "...", "CF-Access-Client-Secret" = "..
 
 ### `local_timeout`
 
-Default: `2`
+Default: `2s`
 
-Timeout (in seconds) for acquiring a local database connection (SQLite).
+Timeout for acquiring a local database (SQLite) connection, as a duration like `500ms`, `2s`, or `1m`.
+
+A bare number is read as a count of seconds (`local_timeout = 2`), for backwards compatibility.
 
 ```
-local_timeout = 2
+local_timeout = "2s"
 ```
 
 ### `command_chaining`
@@ -2104,34 +1989,6 @@ common_prefix = [
 
 Configures commands that should be totally stripped from stats calculations. For example, 'sudo' should be ignored.
 
-## `dotfiles`
-
-Default: `false`
-
-To enable sync of shell aliases between hosts.
-
-Add the new section to the bottom of your config file, for every machine you use Atuin with
-
-```
-[dotfiles]
-enabled = true
-```
-
-Manage aliases using the command line options
-
-```
-# Alias 'k' to 'kubectl'
-atuin dotfiles alias set k kubectl
-
-# List all aliases
-atuin dotfiles alias list
-
-# Delete an alias
-atuin dotfiles alias delete k
-```
-
-After setting an alias, you will either need to restart your shell or source the init file for the change to take effect
-
 ## keys
 
 This section of the client config is specifically for configuring key-related settings.
@@ -2312,12 +2169,14 @@ autostart = false
 
 ### `sync_frequency`
 
-Default: `300`
+Default: `5m`
 
-How often the daemon should sync, in seconds
+How often the daemon should sync, as a duration like `30s`, `5m`, or `1h`.
+
+A bare number is read as a count of seconds (`sync_frequency = 300`), for backwards compatibility.
 
 ```
-sync_frequency = 300
+sync_frequency = "5m"
 ```
 
 ### `socket_path`
@@ -2373,7 +2232,7 @@ Behavior of log files.
 enabled = true
 dir = "~/.atuin/logs"
 level = "info"
-retention = 4
+retention = "4d"
 ```
 
 ### enabled
@@ -2408,12 +2267,14 @@ level = "info"
 
 ### retention
 
-Default: `4`
+Default: `4d`
 
-How many days of log files to keep (per file type). Files older than this will be removed.
+How long to keep log files, per file type, as a duration like `12h` or `7d`. Files older than this are removed.
+
+A bare number is read as a count of days (`retention = 4`), for backwards compatibility.
 
 ```
-retention = 4
+retention = "4d"
 ```
 
 ### ai
@@ -2423,14 +2284,14 @@ A sub-object with specific options for AI logging:
 - `enabled` - whether to output AI logs; defaults to `logs.enabled`
 - `file` - the filename to use for the AI logs; defaults to `"ai.log"`. Always relative to `logs.dir`.
 - `level` - override the log level for the AI logs; defaults to `logs.level`
-- `retention` - how many days to store AI logs; defaults to `logs.retention`
+- `retention` - how long to keep AI logs; defaults to `logs.retention`
 
 ```
 [logs.ai]
 enabled = true
 file = "ai.log"
 level = "info"
-retention = 4
+retention = "4d"
 ```
 
 ### daemon
@@ -2440,14 +2301,14 @@ A sub-object with specific options for daemon logging:
 - `enabled` - whether to output daemon logs; defaults to `logs.enabled`
 - `file` - the filename to use for the daemon logs; defaults to `"daemon.log"`. Always relative to `logs.dir`.
 - `level` - override the log level for the daemon logs; defaults to `logs.level`
-- `retention` - how many days to store daemon logs; defaults to `logs.retention`
+- `retention` - how long to keep daemon logs; defaults to `logs.retention`
 
 ```
 [logs.daemon]
 enabled = true
 file = "daemon.log"
 level = "info"
-retention = 4
+retention = "4d"
 ```
 
 ### search
@@ -2457,14 +2318,14 @@ A sub-object with specific options for search logging:
 - `enabled` - whether to output search logs; defaults to `logs.enabled`
 - `file` - the filename to use for the search logs; defaults to `"search.log"`. Always relative to `logs.dir`.
 - `level` - override the log level for the search logs; defaults to `logs.level`
-- `retention` - how many days to store search logs; defaults to `logs.retention`
+- `retention` - how long to keep search logs; defaults to `logs.retention`
 
 ```
 [logs.search]
 enabled = true
 file = "search.log"
 level = "info"
-retention = 4
+retention = "4d"
 ```
 
 ## theme
@@ -3645,7 +3506,6 @@ Supported shells: `zsh`, `bash`, `fish`, `nu`, `xonsh`, `powershell`. See [Suppo
 
 - **Hooks** that record each command, its exit code, and its duration. See [Shell Integration](https://docs.atuin.sh/guide/shell-integration/index.md).
 - **Key bindings** for `Ctrl`+`R` and the `Up` arrow, and `?` for [Atuin AI](https://docs.atuin.sh/ai/introduction/index.md).
-- **Dotfiles**, if [enabled](https://docs.atuin.sh/configuration/config/#dotfiles) — your synced aliases and environment variables are defined here.
 
 ## Flags
 
@@ -3922,8 +3782,8 @@ Atuin search supports wildcards, with either the `*` or `%` character. By defaul
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--cwd`/`-c`         | The directory to list history for (default: all dirs)                                                                                                                            |
 | `--exclude-cwd`      | Don't include commands that ran in this directory (default: none)                                                                                                                |
-| `--exit`/`-e`        | Filter by exit code (default: none)                                                                                                                                              |
-| `--exclude-exit`     | Don't include commands that exited with this value (default: none)                                                                                                               |
+| `--exit`/`-e`        | Filter by exit code; repeat to include any listed code (default: none)                                                                                                           |
+| `--exclude-exit`     | Exclude an exit code; repeat to exclude all listed codes (default: none)                                                                                                         |
 | `--before`           | Only include commands run before this time (default: none)                                                                                                                       |
 | `--after`            | Only include commands run after this time (default: none)                                                                                                                        |
 | `--interactive`/`-i` | Open the interactive search UI (default: false)                                                                                                                                  |
@@ -3957,6 +3817,12 @@ atuin search -i atuin
 # Search for all commands, beginning with cargo, that exited successfully
 atuin search --exit 0 cargo
 
+# Search for commands with exit code 1 or 2
+atuin search --exit 1 --exit 2
+
+# Exclude commands with exit code 0 or 130
+atuin search --exclude-exit 0 --exclude-exit 130
+
 # Search for all commands, that failed, from the current dir, and were ran before April 1st 2021
 atuin search --exclude-exit 0 --before 01/04/2021 --cwd .
 
@@ -3975,6 +3841,8 @@ atuin search --offset 1 --limit 1 cargo
 # Find the oldest cargo command
 atuin search --limit 1 --reverse cargo
 ```
+
+When both flags are used, results must match one of the included codes and none of the excluded codes.
 
 # stats
 
@@ -4891,9 +4759,11 @@ The path to the SQLite database where Atuin AI sessions are stored.
 
 ### `session_continue_minutes`
 
-Default: `60` (minutes)
+Default: `1h`
 
-The amount of time after the last interaction with Atuin AI that a session is considered "recent" and can be automatically continued. If you interact with Atuin AI and then invoke it again within this time window, the second interaction will be part of the same session. If you wait longer than this time window, a new session will be started. You can always start a new session manually by using the `/new` slash command in the Atuin AI interface.
+The amount of time after the last interaction with Atuin AI that a session is considered "recent" and can be automatically continued, given as a duration like `30m`, `1h`, or `2h`. If you interact with Atuin AI and then invoke it again within this time window, the second interaction will be part of the same session. If you wait longer than this time window, a new session will be started. You can always start a new session manually by using the `/new` slash command in the Atuin AI interface.
+
+A bare number is read as a count of minutes (`session_continue_minutes = 60`), for backwards compatibility.
 
 ### endpoint
 
@@ -5427,9 +5297,9 @@ Captured output isn't limited to Atuin AI: external tools like Claude Code and C
 
 # MCP Server
 
-Atuin ships with a built-in [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server, giving external AI tools like Claude Code and Cursor access to your shell history. Your agent can look up commands you've run before, check whether they succeeded, and — with [output capture](https://docs.atuin.sh/ai/command-output/index.md) set up — read what they printed.
+Atuin ships with a built-in [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server, giving external AI tools like Claude Code and Cursor access to your shell history. Your agent can look up commands you've run before, check whether they succeeded, and — with [output capture](https://docs.atuin.sh/ai/command-output/index.md) set up — read what they printed, or search that output for something it remembers seeing.
 
-The server exposes the same history tools that [Atuin AI](https://docs.atuin.sh/ai/introduction/index.md) uses. Both tools are read-only: nothing can modify or delete your history, and all data stays on your machine.
+The server exposes the same history tools that [Atuin AI](https://docs.atuin.sh/ai/introduction/index.md) uses, plus output search. All tools are read-only: nothing can modify or delete your history, and all data stays on your machine.
 
 ## Starting the server
 
@@ -5481,6 +5351,14 @@ History search reads the Atuin database directly, so it works without any extra 
 Fetches the captured terminal output of a previous command, identified by a history ID from `atuin_history` results. The agent can fetch specific line ranges, so it doesn't need to read a huge log to find the error at the end.
 
 Output capture requires the [daemon](https://docs.atuin.sh/reference/daemon/index.md) and [pty-proxy](https://docs.atuin.sh/reference/pty-proxy/index.md) to be running — see [Reading Command Output](https://docs.atuin.sh/ai/command-output/index.md) for setup. Without them, the tool responds with an error explaining that no output is available.
+
+### `atuin_output_search`
+
+Searches the captured output of every command, for when the agent knows *what* was printed but not *which* command printed it — an error message, a version string, a hostname. It's the same search as `atuin output search`: terms are matched as whole words and all of them must appear.
+
+Each result gives the command and its history metadata, followed by the output lines around each match with their line numbers, so the agent can pass the history ID and a line range to `atuin_output` to read more.
+
+Like `atuin_output`, this needs output capture set up and the daemon running.
 
 Session scope
 
