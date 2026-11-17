@@ -30,22 +30,22 @@ mkdir -p ~/.atuin
 Check whether you have any AI-related files in `~/.atuin`:
 
 ```
-ls ~/.atuin | grep -Fxe permissions.ai.toml -e skills -e TERMINAL.md
+ls ~/.atuin | grep -Fxe permissions.ai.toml -e skills
 ```
 
 If you do, please expand and follow this section:
 
 Migrating home-scoped AI config
 
-In older installations, `permissions.ai.toml`, `skills`, or `TERMINAL.md` in `~/.atuin` are scoped to your home directory, whereas in newer installations, they are applied *globally*. The existence of `~/.atuin/config.toml` is what determines whether the new or old behavior is used; if `~/.atuin/config.toml` exists, these items are interpreted as global.
+In older installations, `permissions.ai.toml` and `skills` in `~/.atuin` are scoped to your home directory, whereas in newer installations, they are applied *globally*. The existence of `~/.atuin/config.toml` is what determines whether the new or old behavior is used; if `~/.atuin/config.toml` exists, these items are interpreted as global.
 
 Before you move your `config.toml` to `~/.atuin`, review the existing AI files in `~/.atuin`, especially `permissions.ai.toml`. Anything you're ok with being made global can be left as-is (global is likely not too different from applying to your entire home directory anyway); anything else should be deleted or moved to subdirectories (meaning moving it into `~/subdir/.atuin/` for each subdirectory).
 
 After you've confirmed that the AI items in `~/.atuin` can be interpreted as global, check whether any AI items appear in both `~/.atuin` and `~/.config/atuin`:
 
 ```
-ls ~/.atuin ~/.config/atuin | grep -Fxe permissions.ai.toml -e skills \
-    -e TERMINAL.md | sort | uniq -d
+ls ~/.atuin ~/.config/atuin | grep -Fxe permissions.ai.toml -e skills | \
+    sort | uniq -d
 ```
 
 If there are any such items, you must merge the items in `~/.config/atuin` into the configuration at `~/.atuin` if you still want them to take effect; otherwise, the items in `~/.config/atuin` will be shadowed by those in `~/.atuin`.
@@ -54,7 +54,7 @@ Next, move your config items:
 
 ```
 cd ~/.config/atuin && mv -n $(ls | grep -Fxe config.toml -e server.toml \
-    -e themes -e skills -e permissions.ai.toml -e TERMINAL.md) ~/.atuin/
+    -e themes -e skills -e permissions.ai.toml) ~/.atuin/
 ```
 
 Then, move your data:
@@ -106,6 +106,18 @@ Set to `false` to disable. With the update check turned off and sync not set up,
 
 ```
 update_check = true/false
+```
+
+### `show_whats_new`
+
+Default: `true`
+
+Configures whether search shows a short note about new features after you upgrade. The note appears once, over the search results. Your first key closes it, and that key still does what it normally does.
+
+Set to `false` to never show it.
+
+```
+show_whats_new = true/false
 ```
 
 ### `sync_address`
@@ -198,6 +210,16 @@ Whichever mode you start in, you can still cycle through the rest with ctrl-r.
 filter_mode = "host"
 ```
 
+### `bind_ctrl_r` and `bind_up_arrow`
+
+Default: `true`
+
+Whether `atuin init` binds ctrl-r and the up arrow to search. Passing `--disable-ctrl-r` or `--disable-up-arrow` to `atuin init` turns a binding off whatever these say.
+
+```
+bind_up_arrow = false
+```
+
 ### `search_mode_shell_up_key_binding`
 
 Default: `fuzzy`
@@ -242,9 +264,9 @@ inline_height_shell_up_key_binding = 10
 
 Default: `true`
 
-This flag enables a pseudo filter-mode named "workspace": the filter is automatically activated when you're in a git repository.
+This flag enables a pseudo filter-mode named "workspace": the filter is automatically activated when you're in a Git or Jujutsu repository.
 
-With workspace filtering enabled, Atuin will filter for commands executed in any directory within a git repository tree.
+With workspace filtering enabled, Atuin filters commands executed in any directory within the repository tree. A plain Git worktree searches history under the main repository root. A Jujutsu workspace searches history under its own root, even when colocated with a Git worktree.
 
 Filter modes can still be toggled via ctrl-r.
 
@@ -589,7 +611,7 @@ prefers_reduced_motion = false
 
 ### `filters`
 
-The list of filter modes available in interactive search, in the order they cycle through when you press ctrl-r. By default, all modes are enabled. Removing a mode from this list disables it entirely. The `workspace` mode is skipped when not in a git repository or when `workspaces = false`. See [Filter mode](https://docs.atuin.sh/guide/advanced-usage/#filter-mode) for a description of each mode.
+The list of filter modes available in interactive search, in the order they cycle through when you press ctrl-r. By default, all modes are enabled. Removing a mode from this list disables it entirely. The `workspace` mode is skipped when not in a repository or when `workspaces = false`. See [Filter mode](https://docs.atuin.sh/guide/advanced-usage/#filter-mode) for a description of each mode.
 
 The `filter_mode` setting selects the initial mode from this list. If `filter_mode` is set to a mode not in the list, the first available mode is used instead.
 
@@ -925,7 +947,7 @@ Default: `false`
 
 Automatically start and manage the daemon when needed. This isn't compatible with `systemd_socket = true`. If a legacy experimental daemon is already running, restart it manually once before using autostart. On macOS, when you're logged in graphically, Atuin runs the daemon as a launchd agent at `~/Library/LaunchAgents/sh.atuin.daemon.plist`, and macOS tells you it added a background item the first time. With `ATUIN_HOME` or `ATUIN_CONFIG_DIR` set, Atuin starts the daemon itself instead.
 
-The agent is listed as `atuin` in System Settings, under General > Login Items. Switched off there, Atuin leaves it off and works without the daemon until you switch it back on. If the agent won't start, `daemon.stderr.log` in Atuin's logs directory says why. The agent gets the environment variables your config's paths use, such as `HISTDIR` for `db_path = "$HISTDIR/history.db"`, with the values they had when Atuin installed it. After you add one, run `atuin daemon restart`.
+The agent is listed as `atuin` in System Settings, under General > Login Items. Switched off there, Atuin leaves it off and works without the daemon until you switch it back on. If the agent won't start, `daemon.stderr.log` in Atuin's logs directory says why. The agent gets the environment variables your config's paths use, such as `HISTDIR` for `db_path = "$HISTDIR/history.db"`. It also gets the ones that say where your coding agents keep their sessions, such as `CODEX_HOME` or `HERMES_HOME`. It keeps the values they had when Atuin installed it, so after you add or change one, run `atuin daemon restart`.
 
 `atuin daemon stop` stops the agent, but with `autostart` on, the next command that needs the daemon starts it again. `atuin config disable daemon` turns the daemon off and removes the agent.
 
